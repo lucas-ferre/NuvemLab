@@ -42,12 +42,49 @@ jobs:
           python -m pytest
 
   build-and-deploy:
+    if: ${{ vars.AZURE_DEPLOY_ENABLED == 'true' }}
     needs: validate
     runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Obter código
         uses: actions/checkout@v4
+
+      - name: Validar configuração do deploy
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
+          AZURE_ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
+          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_STAGING_URL: ${{ vars.AZURE_STAGING_URL }}
+        run: |
+          required=(
+            AZURE_CLIENT_ID
+            AZURE_TENANT_ID
+            AZURE_SUBSCRIPTION_ID
+            AZURE_ACR_NAME
+            AZURE_ACR_LOGIN_SERVER
+            AZURE_WEBAPP_NAME
+            AZURE_RESOURCE_GROUP
+            AZURE_STAGING_URL
+          )
+          missing=()
+
+          for name in "${required[@]}"; do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error title=Configuração Azure incompleta::Defina: ${missing[*]}"
+            echo "Consulte docs/deploy-azure.md para configurar o OIDC e o repositório."
+            exit 1
+          fi
 
       - name: Autenticar no Azure por OIDC
         uses: azure/login@v3
@@ -93,4 +130,3 @@ jobs:
           --name "${WEBAPP_NAME}"
           --slot staging
           --target-slot production
-

@@ -100,6 +100,11 @@ slot `staging` do Azure App Service. O fluxo completo e as configurações
 necessárias estão em [`docs/deploy-azure.md`](docs/deploy-azure.md). O workflow
 de referência está em [`.github/workflows/deploy-azure.yml`](.github/workflows/deploy-azure.yml).
 
+O job de deploy é desabilitado por padrão, portanto o primeiro `push` executa
+somente a validação. Depois de criar a identidade federada e cadastrar os três
+secrets OIDC e as variáveis descritas no guia, defina a repository variable
+`AZURE_DEPLOY_ENABLED=true` para habilitar a publicação no Azure.
+
 > O SQLite atende à demonstração de volume com uma instância. Para escala
 > horizontal de produção, o projeto prevê a migração dos dados para Azure SQL ou
 > Azure Database for PostgreSQL.
@@ -120,4 +125,3 @@ de referência está em [`.github/workflows/deploy-azure.yml`](.github/workflows
 |-- requirements.txt
 `-- README.md
 ```
-
