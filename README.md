@@ -30,6 +30,10 @@ Depois, acesse:
 - Swagger/OpenAPI: <http://localhost:8000/docs>
 - Health check: <http://localhost:8000/health>
 
+Abra a interface pela URL do FastAPI. O arquivo `app/templates/index.html` é um
+template Jinja e não funciona corretamente quando aberto diretamente pelo
+explorador de arquivos, Live Server ou GitHub Pages.
+
 O Compose cria:
 
 - a rede bridge nomeada `nuvemlab_net`;

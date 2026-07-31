@@ -118,10 +118,13 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Executar smoke test
-        run: >
-          curl --fail --silent --show-error
-          --retry 6 --retry-delay 10
-          "${{ vars.AZURE_STAGING_URL }}/health"
+        run: |
+          base_url="${{ vars.AZURE_STAGING_URL }}"
+          for path in health static/styles.css static/app.js; do
+            curl --fail --silent --show-error \
+              --retry 6 --retry-delay 10 \
+              "${base_url}/${path}" > /dev/null
+          done
 
       - name: Promover staging para produção
         run: >

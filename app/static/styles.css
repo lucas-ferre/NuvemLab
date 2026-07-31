@@ -121,6 +121,7 @@ textarea {
   font-size: 0.92rem;
   font-weight: 650;
   text-decoration: none;
+  transition: color 180ms ease;
 }
 
 .nav-list a:hover,
@@ -133,6 +134,13 @@ textarea {
   color: var(--white);
   background: var(--ink);
   border-radius: 999px;
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+.nav-list .nav-cta:hover,
+.nav-list .nav-cta:focus-visible {
+  color: var(--cyan);
+  background: var(--navy-soft);
 }
 
 .hero {
@@ -515,6 +523,7 @@ textarea:focus-visible {
 }
 
 .section-dark {
+  overflow: hidden;
   color: var(--white);
   background:
     linear-gradient(140deg, rgb(57 212 216 / 6%), transparent 42%),
@@ -561,6 +570,20 @@ textarea:focus-visible {
   background: var(--navy-soft);
   border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 16px;
+}
+
+html.motion-enabled [data-window-group] [data-window] {
+  opacity: 0.35;
+  transform: translateX(-72px);
+  transition:
+    opacity 520ms ease var(--window-delay, 0ms),
+    transform 720ms cubic-bezier(0.2, 0.75, 0.25, 1) var(--window-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+html.motion-enabled [data-window-group].is-visible [data-window] {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .service-card h3 {
@@ -910,5 +933,9 @@ textarea:focus-visible {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
-}
 
+  html.motion-enabled [data-window-group] [data-window] {
+    opacity: 1;
+    transform: none;
+  }
+}

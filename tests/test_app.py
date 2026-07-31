@@ -20,8 +20,25 @@ def test_pagina_inicial_e_cabecalhos(tmp_path, monkeypatch):
 
     assert resposta.status_code == 200
     assert "NuvemLab" in resposta.text
+    assert 'href="/static/styles.css?v=20260731"' in resposta.text
+    assert 'src="/static/app.js?v=20260731"' in resposta.text
     assert resposta.headers["x-content-type-options"] == "nosniff"
     assert resposta.headers["x-frame-options"] == "DENY"
+
+
+def test_arquivos_estaticos_sao_servidos(tmp_path, monkeypatch):
+    cliente, _ = criar_cliente(tmp_path, monkeypatch)
+
+    with cliente:
+        css = cliente.get("/static/styles.css")
+        javascript = cliente.get("/static/app.js")
+
+    assert css.status_code == 200
+    assert css.headers["content-type"].startswith("text/css")
+    assert ".nav-list a:hover" in css.text
+    assert javascript.status_code == 200
+    assert "javascript" in javascript.headers["content-type"]
+    assert "IntersectionObserver" in javascript.text
 
 
 def test_catalogo_de_servicos(tmp_path, monkeypatch):
