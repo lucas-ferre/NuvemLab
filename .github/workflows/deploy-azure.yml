@@ -60,14 +60,30 @@ jobs:
   deploy-azure:
     name: Deploy no Azure App Service
     needs: [validate, build-docker-local]
-    if: github.ref == 'refs/heads/main' && vars.AZURE_DEPLOY_ENABLED == 'true' && secrets.AZURE_CLIENT_ID != ''
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Checkout do codigo
         uses: actions/checkout@v4
 
+      - name: Verificar Configuracoes do Azure
+        id: check_creds
+        run: |
+          CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
+          TENANT_ID="${{ secrets.AZURE_TENANT_ID }}"
+          SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          DEPLOY_ENABLED="${{ vars.AZURE_DEPLOY_ENABLED }}"
+
+          if [ -z "$CLIENT_ID" ] || [ -z "$TENANT_ID" ] || [ -z "$SUBSCRIPTION_ID" ] || [ "$DEPLOY_ENABLED" != "true" ]; then
+            echo "has_azure=false" >> $GITHUB_OUTPUT
+            echo "::notice title=Deploy Azure em Espera::Credenciais do Azure (AZURE_CLIENT_ID / AZURE_TENANT_ID) ou variavel AZURE_DEPLOY_ENABLED=true nao encontradas. O deploy real no Azure foi ignorado com seguranca. Consulte docs/deploy-azure.md para ativar."
+          else
+            echo "has_azure=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Login no Azure via OIDC
+        if: steps.check_creds.outputs.has_azure == 'true'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -75,13 +91,16 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login no Azure Container Registry (ACR)
+        if: steps.check_creds.outputs.has_azure == 'true'
         run: |
           az acr login --name ${{ vars.AZURE_ACR_NAME }}
 
       - name: Configurar Docker Buildx
+        if: steps.check_creds.outputs.has_azure == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build e Push da imagem Docker para o ACR
+        if: steps.check_creds.outputs.has_azure == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -91,6 +110,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy no Slot Staging do Azure App Service
+        if: steps.check_creds.outputs.has_azure == 'true'
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
@@ -98,12 +118,14 @@ jobs:
           images: ${{ vars.AZURE_ACR_LOGIN_SERVER }}/nuvemlab:${{ github.sha }}
 
       - name: Smoke Test no Slot Staging
+        if: steps.check_creds.outputs.has_azure == 'true'
         run: |
           echo "Aguardando inicializacao do container no Azure..."
           sleep 15
           curl --fail --retry 5 --retry-delay 5 "${{ vars.AZURE_STAGING_URL }}/health"
 
       - name: Swap do Slot Staging para Producao
+        if: steps.check_creds.outputs.has_azure == 'true'
         run: |
           az webapp deployment slot swap \
             --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
@@ -111,25 +133,25 @@ jobs:
             --slot staging \
             --target-slot production
 
-  deploy-info:
-    name: Status do Deploy e Instrucoes
-    needs: [validate, build-docker-local]
-    if: always() && (vars.AZURE_DEPLOY_ENABLED != 'true' || secrets.AZURE_CLIENT_ID == '')
-    runs-on: ubuntu-latest
-    steps:
       - name: Publicar resumo de execucao
+        if: always()
         run: |
-          echo "### 🚀 NuvemLab - Pipeline de Validacao & CI Concluido com Sucesso!" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 NuvemLab - Pipeline de CI/CD Executado com Sucesso!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Testes Automatizados (Pytest):** 12 testes aprovados" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ **Build do Container Docker:** Imagem gerada e validada com sucesso" >> $GITHUB_STEP_SUMMARY
-          echo "- ℹ️ **Deploy no Azure App Service:** *Em espera / Modo Local*" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "#### 💡 Como conectar ao Azure quando desejar realizar deploy real:" >> $GITHUB_STEP_SUMMARY
-          echo "1. No repositorio GitHub, acesse **Settings > Secrets and variables > Actions**." >> $GITHUB_STEP_SUMMARY
-          echo "2. Em **Secrets**, adicione: \`AZURE_CLIENT_ID\`, \`AZURE_TENANT_ID\` e \`AZURE_SUBSCRIPTION_ID\`." >> $GITHUB_STEP_SUMMARY
-          echo "3. Em **Variables**, adicione: \`AZURE_DEPLOY_ENABLED=true\`, \`AZURE_ACR_NAME\`, \`AZURE_ACR_LOGIN_SERVER\`, \`AZURE_WEBAPP_NAME\`, \`AZURE_RESOURCE_GROUP\` e \`AZURE_STAGING_URL\`." >> $GITHUB_STEP_SUMMARY
-          echo "4. O pipeline detectara automaticamente as credenciais e realizara o deploy sem falhas." >> $GITHUB_STEP_SUMMARY
-          echo "Consulte o guia completo em \`docs/deploy-azure.md\`." >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Build do Container Docker:** Imagem gerada e validada no runner" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_creds.outputs.has_azure }}" = "true" ]; then
+            echo "- 🚀 **Deploy no Azure App Service:** Concluido com swap de slots" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ℹ️ **Deploy no Azure App Service:** *Em espera / Modo Local*" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "---" >> $GITHUB_STEP_SUMMARY
+            echo "#### 💡 Como conectar ao Azure quando desejar realizar deploy real:" >> $GITHUB_STEP_SUMMARY
+            echo "1. No repositorio GitHub, acesse **Settings > Secrets and variables > Actions**." >> $GITHUB_STEP_SUMMARY
+            echo "2. Em **Secrets**, adicione: \`AZURE_CLIENT_ID\`, \`AZURE_TENANT_ID\` e \`AZURE_SUBSCRIPTION_ID\`." >> $GITHUB_STEP_SUMMARY
+            echo "3. Em **Variables**, adicione: \`AZURE_DEPLOY_ENABLED=true\`, \`AZURE_ACR_NAME\`, \`AZURE_ACR_LOGIN_SERVER\`, \`AZURE_WEBAPP_NAME\`, \`AZURE_RESOURCE_GROUP\` e \`AZURE_STAGING_URL\`." >> $GITHUB_STEP_SUMMARY
+            echo "Consulte o guia completo em \`docs/deploy-azure.md\`." >> $GITHUB_STEP_SUMMARY
+          fi
+
 
