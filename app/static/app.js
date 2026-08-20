@@ -16,6 +16,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const domainBadge = document.querySelector(".domain-name");
+  if (domainBadge && window.location.host) {
+    domainBadge.textContent = window.location.host.includes("localhost") || window.location.host.includes("127.0.0.1")
+      ? "localhost:8000 (Modo Local)"
+      : window.location.host;
+  }
+
   const scrollProgressBar = document.getElementById("scroll-progress");
   const backToTopBtn = document.getElementById("back-to-top");
 

@@ -539,10 +539,15 @@ h1 strong {
   background: var(--bg-card-subtle);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
+  color: var(--ink);
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.copy-btn svg {
+  stroke: currentColor;
 }
 
 .copy-btn:hover {
@@ -1233,6 +1238,57 @@ h1 strong {
   color: var(--cyan);
   font-family: monospace;
   font-weight: 700;
+}
+
+#api-copy-json {
+  color: var(--azure);
+  background: var(--azure-light);
+  border-color: rgba(0, 120, 212, 0.35);
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+#api-copy-json svg {
+  stroke: currentColor;
+}
+
+#api-copy-json:hover {
+  background: rgba(0, 120, 212, 0.25);
+  border-color: var(--azure);
+  color: var(--azure-dark);
+}
+
+[data-theme="light"] #api-copy-json,
+:root:not([data-theme="dark"]) #api-copy-json {
+  color: #0078d4;
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  font-weight: 700;
+}
+
+[data-theme="light"] #api-copy-json:hover,
+:root:not([data-theme="dark"]) #api-copy-json:hover {
+  background: #bae6fd;
+  border-color: #0078d4;
+  color: #005a9e;
+}
+
+[data-theme="dark"] #api-copy-json {
+  color: var(--cyan);
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+[data-theme="dark"] #api-copy-json:hover {
+  background: rgba(6, 182, 212, 0.22);
+  border-color: var(--cyan);
+  color: #ffffff;
+}
+
+#api-copy-json.is-copied {
+  color: var(--emerald) !important;
+  border-color: var(--emerald) !important;
+  background: rgba(16, 185, 129, 0.18) !important;
 }
 
 .api-json-viewer {
