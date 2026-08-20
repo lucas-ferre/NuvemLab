@@ -1,19 +1,19 @@
-# NuvemLab - Projeto Integrador com Docker e Nuvem (v1.2.0)
+# NuvemLab - Projeto Integrador com Docker e Nuvem 
 
 Aplicação cloud-native moderna e segura construída com FastAPI, Docker e Azure:
 uma página institucional reativa com alternância de temas (Dark/Light), um **Explorador Interativo de Arquitetura**, um **Console / Playground da API ao vivo**, um **Simulador FinOps de Dimensionamento**, **Monitor de Telemetria em Tempo Real** e formulário de contato com persistência em **SQLite WAL** montado em volume Docker.
 
 ---
 
-## 🚀 Novidades da Versão 1.2.0
+## Notas de Atualização - Versão 1.1.1
 
-- 🎨 **Design System Moderno (UI/UX 2026):** Estética Liquid Glass/Glassmorphism, suporte nativo a temas **Dark / Light / Azure**, menu mobile drawer responsivo e animações suaves respeitando `prefers-reduced-motion`.
-- ⚡ **Novas Interações no Frontend:**
+- **Design System Moderno (UI/UX 2026):** Estética Liquid Glass/Glassmorphism, suporte nativo a temas **Dark / Light / Azure**, menu mobile drawer responsivo e animações suaves respeitando `prefers-reduced-motion`.
+- **Novas Interações no Frontend:**
   - **Explorador Interativo de Arquitetura:** nós clicáveis da infraestrutura com detalhamento de protocolos, portas e camadas de segurança.
   - **Playground da API REST ao Vivo:** console para executar chamadas reais (`GET` e `POST`), medir latência em ms e visualizar payloads JSON formatados.
   - **Calculadora FinOps & Dimensionamento:** simulação interativa de requisições, memória, RPS suportado e comparativo de custos com servidores dedicados.
   - **Monitor de Telemetria:** painel em tempo real consultando uptime, status operacional e registros gravados.
-- 🛡️ **Segurança & Hardening Reforçados (OWASP):**
+- **Segurança & Hardening Reforçados (OWASP):**
   - **Rate Limiting por IP** (janela deslizante com HTTP 429 e cabeçalho `Retry-After`).
   - **Armadilha Anti-Spam Honeypot** para descarte silencioso de bots maliciosos.
   - **Sanitização contra XSS** nos campos de entrada e validação estrita Pydantic v2.
@@ -22,7 +22,7 @@ uma página institucional reativa com alternância de temas (Dark/Light), um **E
 
 ---
 
-## 📦 Entregáveis
+## Entregáveis
 
 - [`Dockerfile`](Dockerfile): imagem oficial Python 3.13-slim, build em dois estágios, usuário não-root (UID 10001), porta 8000 e `HEALTHCHECK`.
 - [`Relatório final`](docs/relatorio-projeto.pdf): relatório técnico com cinco páginas.
@@ -31,7 +31,7 @@ uma página institucional reativa com alternância de temas (Dark/Light), um **E
 
 ---
 
-## 🐳 Executar com Docker
+## Executar com Docker
 
 Pré-requisito: Docker Desktop ou Docker Engine com Docker Compose.
 
@@ -59,7 +59,7 @@ docker compose down
 
 ---
 
-## 💾 Comprovar a persistência
+## Comprovar a persistência
 
 1. Envie uma mensagem pelo formulário ou via API.
 2. Reinicie o serviço com `docker compose restart`.
@@ -73,7 +73,7 @@ O total continua preservado após o reinício porque o banco está no volume nom
 
 ---
 
-## 💻 Executar e testar sem Docker
+## Executar e testar sem Docker
 
 ```bash
 python -m venv .venv
@@ -95,7 +95,7 @@ python -m pytest
 
 ---
 
-## 🌐 Rotas Principais da API
+## Rotas Principais da API
 
 | Método | Rota | Finalidade | Segurança |
 |---|---|---|---|
@@ -117,7 +117,7 @@ curl -X POST http://localhost:8000/api/contato \
 
 ---
 
-## ☁️ Deploy no Azure App Service
+## Deploy no Azure App Service
 
 A estratégia selecionada é CI/CD com GitHub Actions, Azure Container Registry e slot `staging` do Azure App Service. O fluxo completo e as configurações necessárias estão em [`docs/deploy-azure.md`](docs/deploy-azure.md).
 
