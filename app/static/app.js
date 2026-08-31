@@ -228,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const responseData = await response.json();
         if (apiJsonOutput) {
-          apiJsonOutput.innerHTML = `<code>${escapeHtml(JSON.stringify(responseData, null, 2))}</code>`;
+          apiJsonOutput.innerHTML = `<code>${syntaxHighlight(responseData)}</code>`;
         }
 
         if (activeUrl === "/api/contato" && response.ok) {
@@ -242,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
           apiResStatus.className = "status-chip chip-error";
         }
         if (apiJsonOutput) {
-          apiJsonOutput.innerHTML = `<code>// Falha ao conectar: ${escapeHtml(err.message)}</code>`;
+          apiJsonOutput.innerHTML = `<code><span class="json-null">// Falha ao conectar: ${escapeHtml(err.message)}</span></code>`;
         }
       } finally {
         apiSendBtn.classList.remove("is-loading");
@@ -285,6 +285,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (valMem) valMem.textContent = `${mem} MB`;
     if (valInst) valInst.textContent = `${inst} nó${inst > 1 ? "s" : ""}`;
 
+    const updateSliderFill = (slider, min, max, val) => {
+      const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));
+      slider.style.background = `linear-gradient(90deg, var(--azure) ${pct}%, var(--line) ${pct}%)`;
+    };
+    updateSliderFill(sliderReqs, 10000, 5000000, reqs);
+    updateSliderFill(sliderMem, 256, 4096, mem);
+    updateSliderFill(sliderInst, 1, 10, inst);
+
     const costAzure = (13.0 * inst) + ((reqs / 1000000) * 0.40);
     const costOnprem = (45.0 * inst) + 25.0;
     const savings = Math.max(0, Math.round(((costOnprem - costAzure) / costOnprem) * 100));
@@ -296,6 +304,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (finopsCostOnprem) finopsCostOnprem.textContent = `$${costOnprem.toFixed(2)} / mês`;
     if (finopsThroughput) finopsThroughput.textContent = `${rps} req / seg`;
     if (finopsLatency) finopsLatency.textContent = `~${latency} ms`;
+
+    const barValAzure = document.getElementById("finops-bar-val-azure");
+    const barValOnprem = document.getElementById("finops-bar-val-onprem");
+    const chartFillAzure = document.getElementById("finops-chart-fill-azure");
+    const chartFillOnprem = document.getElementById("finops-chart-fill-onprem");
+
+    if (barValAzure) barValAzure.textContent = `$${costAzure.toFixed(2)}/mês`;
+    if (barValOnprem) barValOnprem.textContent = `$${costOnprem.toFixed(2)}/mês`;
+
+    if (chartFillAzure && chartFillOnprem) {
+      const maxCost = Math.max(costOnprem, costAzure, 1);
+      const azurePct = Math.max(8, Math.round((costAzure / maxCost) * 100));
+      const onpremPct = Math.max(8, Math.round((costOnprem / maxCost) * 100));
+      chartFillAzure.style.width = `${azurePct}%`;
+      chartFillOnprem.style.width = `${onpremPct}%`;
+    }
   }
 
   sliderReqs?.addEventListener("input", updateFinOpsCalculations);
@@ -493,6 +517,86 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  function syntaxHighlight(json) {
+    if (typeof json !== "string") {
+      json = JSON.stringify(json, null, 2);
+    }
+    json = escapeHtml(json);
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+      let cls = "json-number";
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) {
+          cls = "json-key";
+        } else {
+          cls = "json-string";
+        }
+      } else if (/true|false/.test(match)) {
+        cls = "json-boolean";
+      } else if (/null/.test(match)) {
+        cls = "json-null";
+      }
+      return `<span class="${cls}">${match}</span>`;
+    });
+  }
+
+  function renderUptimeHistory() {
+    const container = document.getElementById("uptime-bars-track");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const bar = document.createElement("div");
+      bar.className = "uptime-bar-item";
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+      const isToday = i === 0;
+      const label = isToday ? `Hoje (${dateStr}): 100.0% Operacional` : `${dateStr}: 100.0% Operacional`;
+      bar.title = label;
+      bar.setAttribute("aria-label", label);
+      container.appendChild(bar);
+    }
+  }
+  renderUptimeHistory();
+
+  // Spotlight effect (Linear / Vercel style)
+  const spotlightCards = document.querySelectorAll(
+    ".feature, .service-card, .telemetry-card, .finops-controls-card, .finops-results-card, .arch-details-card, .cloud-card, .contact-form, .uptime-history-card"
+  );
+
+  spotlightCards.forEach((card) => {
+    card.addEventListener("mousemove", (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.setProperty("--mouse-x", `${x}px`);
+      card.style.setProperty("--mouse-y", `${y}px`);
+    });
+  });
+
+  // Mobile Bottom Navigation active scroll spy
+  const bottomNavItems = document.querySelectorAll(".mobile-bottom-item");
+  if (bottomNavItems.length) {
+    const sections = document.querySelectorAll("section[id]");
+    window.addEventListener("scroll", () => {
+      let currentId = "";
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 200;
+        if (window.scrollY >= top) {
+          currentId = sec.getAttribute("id");
+        }
+      });
+      bottomNavItems.forEach(item => {
+        if (item.getAttribute("href") === `#${currentId}`) {
+          item.classList.add("is-active");
+        } else {
+          item.classList.remove("is-active");
+        }
+      });
+    }, { passive: true });
   }
 
   const windowGroups = document.querySelectorAll("[data-window-group]");
