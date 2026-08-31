@@ -405,12 +405,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (contactForm) {
+    contactForm.querySelectorAll("input, textarea").forEach((input) => {
+      input.addEventListener("input", () => {
+        input.classList.remove("is-invalid");
+      });
+    });
+
     contactForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const submitBtn = contactForm.querySelector('button[type="submit"]');
       const formData = new FormData(contactForm);
       const payload = Object.fromEntries(formData.entries());
+
+      contactForm.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
 
       if (payload.hp_website && payload.hp_website.trim() !== "") {
         showToast("Mensagem enviada com sucesso!", "success");
@@ -440,7 +448,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.detail || "Verifique os campos preenchidos e tente novamente.");
+          const parsedError = formatApiError(errData, contactForm);
+          throw new Error(parsedError);
         }
 
         const result = await response.json();
@@ -469,6 +478,50 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     });
+  }
+
+  function formatApiError(errData, formElement) {
+    if (!errData) return "Verifique os campos preenchidos e tente novamente.";
+    if (typeof errData.detail === "string") return errData.detail;
+
+    if (Array.isArray(errData.detail)) {
+      const fieldTranslations = {
+        nome: "Nome Completo",
+        email: "E-mail Profissional",
+        mensagem: "Mensagem",
+        topico: "Assunto"
+      };
+
+      const messages = errData.detail.map((err) => {
+        const fieldKey = Array.isArray(err.loc) ? err.loc[err.loc.length - 1] : "";
+        const fieldLabel = fieldTranslations[fieldKey] || fieldKey || "Campo";
+
+        if (formElement && fieldKey) {
+          const inputEl = formElement.querySelector(`[name="${fieldKey}"]`);
+          if (inputEl) inputEl.classList.add("is-invalid");
+        }
+
+        if (err.type === "string_too_short") {
+          const min = err.ctx?.min_length || 2;
+          return `${fieldLabel} deve ter no mínimo ${min} caracteres`;
+        }
+        if (err.type === "string_too_long") {
+          const max = err.ctx?.max_length || 1000;
+          return `${fieldLabel} deve ter no máximo ${max} caracteres`;
+        }
+        if (err.type === "value_error" || err.type?.includes("email")) {
+          return `${fieldLabel} informado é inválido`;
+        }
+        if (err.type === "missing") {
+          return `${fieldLabel} é obrigatório`;
+        }
+        return `${fieldLabel}: preenchimento inválido`;
+      });
+
+      return messages.join(" • ");
+    }
+
+    return "Verifique os dados preenchidos e tente novamente.";
   }
 
   const copyButtons = document.querySelectorAll(".copy-btn[data-copy]");
@@ -562,7 +615,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   renderUptimeHistory();
 
-  // Spotlight effect (Linear / Vercel style)
   const spotlightCards = document.querySelectorAll(
     ".feature, .service-card, .telemetry-card, .finops-controls-card, .finops-results-card, .arch-details-card, .cloud-card, .contact-form, .uptime-history-card"
   );
@@ -577,7 +629,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Mobile Bottom Navigation active scroll spy
   const bottomNavItems = document.querySelectorAll(".mobile-bottom-item");
   if (bottomNavItems.length) {
     const sections = document.querySelectorAll("section[id]");

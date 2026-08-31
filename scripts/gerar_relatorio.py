@@ -317,7 +317,6 @@ def draw_page(canvas, doc) -> None:
 def build_story() -> list:
     story: list = []
 
-    # Página 1
     story.extend(
         [
             Spacer(1, 3 * mm),
@@ -368,7 +367,6 @@ def build_story() -> list:
     )
     story.append(PageBreak())
 
-    # Página 2
     story.extend(
         [
             p("1. Planejamento da arquitetura", "page_title"),
@@ -453,7 +451,6 @@ def build_story() -> list:
     )
     story.append(PageBreak())
 
-    # Página 3
     story.extend(
         [
             p("2. Preparação do ambiente com Docker", "page_title"),
@@ -542,7 +539,6 @@ def build_story() -> list:
     )
     story.append(PageBreak())
 
-    # Página 4
     story.extend(
         [
             p("3. Simulação de deploy no Azure", "page_title"),
@@ -614,7 +610,6 @@ def build_story() -> list:
     )
     story.append(PageBreak())
 
-    # Página 5
     story.extend(
         [
             p("4. Benefícios, desafios e conceitos de nuvem", "page_title"),

@@ -1857,6 +1857,11 @@ h1 strong {
   box-shadow: 0 0 0 3px var(--azure-glow);
 }
 
+.field input.is-invalid, .field textarea.is-invalid {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22) !important;
+}
+
 .textarea-header {
   display: flex;
   justify-content: space-between;
@@ -2062,7 +2067,6 @@ h1 strong {
   transform: scale(1.12);
 }
 
-/* Spotlight Card Effect (Linear / Vercel style) */
 .feature, .service-card, .telemetry-card, .finops-controls-card, .finops-results-card, .arch-details-card, .cloud-card, .contact-form, .uptime-history-card {
   position: relative;
   background-clip: padding-box;
