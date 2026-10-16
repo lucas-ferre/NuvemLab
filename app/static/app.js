@@ -1,46 +1,79 @@
 document.addEventListener("DOMContentLoaded", () => {
   const themeToggleBtn = document.getElementById("theme-toggle");
+  const themeLabel = document.getElementById("theme-label");
+  const metaThemeColor = document.getElementById("meta-theme-color");
   const storedTheme = localStorage.getItem("nuvemlab-theme");
   const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  
-  const currentTheme = storedTheme || (systemPrefersDark ? "dark" : "light");
-  document.documentElement.setAttribute("data-theme", currentTheme);
+
+  const THEME_ORDER = ["dark", "azure", "light"];
+  const THEME_NAMES = {
+    dark: "Escuro (Dark)",
+    azure: "Azure Deep",
+    light: "Claro (Light)",
+  };
+  const THEME_BADGES = {
+    dark: "Dark",
+    azure: "Azure",
+    light: "Light",
+  };
+  const THEME_COLORS = {
+    dark: "#050d18",
+    azure: "#04142c",
+    light: "#f8fafc",
+  };
+
+  function applyTheme(theme, notify = false) {
+    const validTheme = THEME_ORDER.includes(theme) ? theme : "dark";
+    document.documentElement.setAttribute("data-theme", validTheme);
+    localStorage.setItem("nuvemlab-theme", validTheme);
+    if (themeLabel) themeLabel.textContent = THEME_BADGES[validTheme];
+    if (metaThemeColor) metaThemeColor.setAttribute("content", THEME_COLORS[validTheme]);
+    if (notify) {
+      showToast(`Tema alterado para modo ${THEME_NAMES[validTheme]}.`, "info");
+    }
+  }
+
+  const initialTheme = storedTheme || (systemPrefersDark ? "dark" : "light");
+  applyTheme(initialTheme, false);
 
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener("click", () => {
-      const activeTheme = document.documentElement.getAttribute("data-theme");
-      const nextTheme = activeTheme === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", nextTheme);
-      localStorage.setItem("nuvemlab-theme", nextTheme);
-      showToast(`Tema alterado para modo ${nextTheme === "dark" ? "Escuro" : "Claro"}.`, "info");
+      const activeTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      const nextIndex = (THEME_ORDER.indexOf(activeTheme) + 1) % THEME_ORDER.length;
+      applyTheme(THEME_ORDER[nextIndex], true);
     });
   }
 
   const domainBadge = document.querySelector(".domain-name");
   if (domainBadge && window.location.host) {
-    domainBadge.textContent = window.location.host.includes("localhost") || window.location.host.includes("127.0.0.1")
-      ? "localhost:8000 (Modo Local)"
-      : window.location.host;
+    domainBadge.textContent =
+      window.location.host.includes("localhost") || window.location.host.includes("127.0.0.1")
+        ? "localhost:8000 (Modo Local)"
+        : window.location.host;
   }
 
   const scrollProgressBar = document.getElementById("scroll-progress");
   const backToTopBtn = document.getElementById("back-to-top");
 
-  window.addEventListener("scroll", () => {
-    const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-    if (totalHeight > 0 && scrollProgressBar) {
-      const progress = (window.scrollY / totalHeight) * 100;
-      scrollProgressBar.style.width = `${progress}%`;
-    }
-
-    if (backToTopBtn) {
-      if (window.scrollY > 320) {
-        backToTopBtn.classList.add("is-visible");
-      } else {
-        backToTopBtn.classList.remove("is-visible");
+  window.addEventListener(
+    "scroll",
+    () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight > 0 && scrollProgressBar) {
+        const progress = (window.scrollY / totalHeight) * 100;
+        scrollProgressBar.style.width = `${progress}%`;
       }
-    }
-  }, { passive: true });
+
+      if (backToTopBtn) {
+        if (window.scrollY > 320) {
+          backToTopBtn.classList.add("is-visible");
+        } else {
+          backToTopBtn.classList.remove("is-visible");
+        }
+      }
+    },
+    { passive: true }
+  );
 
   if (backToTopBtn) {
     backToTopBtn.addEventListener("click", () => {
@@ -71,11 +104,101 @@ document.addEventListener("DOMContentLoaded", () => {
   mobileMenuBtn?.addEventListener("click", openMobileDrawer);
   mobileDrawerClose?.addEventListener("click", closeMobileDrawer);
   mobileDrawerOverlay?.addEventListener("click", closeMobileDrawer);
-  mobileNavLinks.forEach(link => link.addEventListener("click", closeMobileDrawer));
+  mobileNavLinks.forEach((link) => link.addEventListener("click", closeMobileDrawer));
+
+  const cmdTriggerBtn = document.getElementById("cmd-palette-trigger");
+  const cmdBackdrop = document.getElementById("cmd-palette-backdrop");
+  const cmdInput = document.getElementById("cmd-palette-input");
+  const cmdEscBtn = document.getElementById("cmd-palette-esc");
+  const cmdItems = document.querySelectorAll(".cmd-item");
+
+  function openCommandPalette() {
+    if (!cmdBackdrop) return;
+    cmdBackdrop.classList.add("is-open");
+    cmdBackdrop.setAttribute("aria-hidden", "false");
+    if (cmdInput) {
+      cmdInput.value = "";
+      filterCommandItems("");
+      setTimeout(() => cmdInput.focus(), 40);
+    }
+  }
+
+  function closeCommandPalette() {
+    if (!cmdBackdrop) return;
+    cmdBackdrop.classList.remove("is-open");
+    cmdBackdrop.setAttribute("aria-hidden", "true");
+  }
+
+  function filterCommandItems(query) {
+    const q = query.trim().toLowerCase();
+    cmdItems.forEach((item) => {
+      const text = item.textContent?.toLowerCase() || "";
+      item.style.display = !q || text.includes(q) ? "flex" : "none";
+    });
+  }
+
+  cmdTriggerBtn?.addEventListener("click", openCommandPalette);
+  cmdEscBtn?.addEventListener("click", closeCommandPalette);
+  cmdBackdrop?.addEventListener("click", (e) => {
+    if (e.target === cmdBackdrop) closeCommandPalette();
+  });
+
+  cmdInput?.addEventListener("input", () => {
+    filterCommandItems(cmdInput.value);
+  });
+
+  cmdInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const firstVisible = Array.from(cmdItems).find((el) => el.style.display !== "none");
+      if (firstVisible) firstVisible.click();
+    }
+  });
+
+  cmdItems.forEach((item) => {
+    item.addEventListener("click", async () => {
+      const action = item.dataset.cmdAction;
+      closeCommandPalette();
+
+      if (action === "goto") {
+        const target = document.querySelector(item.dataset.target || "");
+        target?.scrollIntoView({ behavior: "smooth" });
+      } else if (action === "theme") {
+        applyTheme(item.dataset.themeVal || "dark", true);
+      } else if (action === "ping-health") {
+        const t0 = performance.now();
+        try {
+          const r = await fetch("/health");
+          const ms = Math.round(performance.now() - t0);
+          if (r.ok) {
+            showToast(`Healthcheck /health OK (200) em ${ms} ms! SQLite WAL operacional.`, "success");
+          }
+        } catch {
+          showToast("Falha ao consultar /health.", "error");
+        }
+      } else if (action === "copy-docker") {
+        navigator.clipboard?.writeText("docker compose up --build");
+        showToast("Comando 'docker compose up --build' copiado!", "info");
+      } else if (action === "open-swagger") {
+        window.open("/docs", "_blank", "noopener");
+      }
+    });
+  });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && mobileDrawer?.classList.contains("is-active")) {
-      closeMobileDrawer();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if (cmdBackdrop?.classList.contains("is-open")) {
+        closeCommandPalette();
+      } else {
+        openCommandPalette();
+      }
+    } else if (e.key === "Escape") {
+      if (cmdBackdrop?.classList.contains("is-open")) {
+        closeCommandPalette();
+      }
+      if (mobileDrawer?.classList.contains("is-active")) {
+        closeMobileDrawer();
+      }
     }
   });
 
@@ -86,10 +209,12 @@ document.addEventListener("DOMContentLoaded", () => {
       desc: "Navegadores modernos, pipelines externos e clientes cURL comunicam-se via chamadas REST com criptografia ponta a ponta TLS 1.3.",
       protocol: "HTTPS / HTTP/2 (TLS 1.3)",
       port: "443 / 80",
-      security: "HSTS, CSP, COOP, CORS & Sanitização",
+      security: "HSTS, CSP, COOP, CORP & Sanitização",
       latency: "< 15 ms",
-      tech: ["Navegador Moderno", "cURL", "Fetch API", "PWA Ready"],
-      status: "Online (Ativo)"
+      tech: ["Navegador Moderno", "cURL", "Fetch API", "Command Palette"],
+      status: "Online (Ativo)",
+      endpoint: "servicos",
+      pingUrl: "/api/servicos",
     },
     azure: {
       category: "PaaS Hosting & Ingress",
@@ -99,19 +224,23 @@ document.addEventListener("DOMContentLoaded", () => {
       port: "443 -> 8000",
       security: "Azure WAF L7, Zero Trust & OIDC Federated",
       latency: "~4 ms",
-      tech: ["Azure App Service", "Linux Container", "Health Probes", "ACR"],
-      status: "Online (PaaS Gerenciado)"
+      tech: ["Azure App Service", "Linux Container", "Slot Staging Swap", "ACR"],
+      status: "Online (PaaS Gerenciado)",
+      endpoint: "health",
+      pingUrl: "/health",
     },
     docker: {
       category: "Compute & Runtime ASGI",
       title: "Container Docker com FastAPI & Uvicorn",
       desc: "Executa a aplicação Python 3.13-slim sob usuário não-root (UID 10001), sistema de arquivos em modo somente leitura (read-only) e rate limiting por IP.",
-      protocol: "ASGI / HTTP 1.1",
+      protocol: "ASGI / HTTP 1.1 (GZip)",
       port: "8000 (Interna)",
       security: "UID 10001 (Não-Root), Read-Only FS, Rate Limiter",
       latency: "~2.5 ms",
       tech: ["Python 3.13-slim", "FastAPI 0.115", "Uvicorn ASGI", "Pydantic v2"],
-      status: "Online (UID 10001)"
+      status: "Online (UID 10001)",
+      endpoint: "metrics",
+      pingUrl: "/api/status/metrics",
     },
     sqlite: {
       category: "Armazenamento & Persistência",
@@ -119,13 +248,16 @@ document.addEventListener("DOMContentLoaded", () => {
       desc: "Engine relacional operando com Write-Ahead Logging (WAL), permitindo leituras concorrentes sem bloqueio de escrita e mantendo os dados entre recriações do container.",
       protocol: "POSIX File I/O (WAL)",
       port: "Local VFS (/home/data)",
-      security: "Named Volume, WAL Concurrency, ACID Integrity",
+      security: "Named Volume, WAL Concurrency, LGPD Masking",
       latency: "< 1.0 ms",
       tech: ["SQLite 3", "WAL Mode", "Docker Named Volume", "Busy Timeout 5s"],
-      status: "Persistido (WAL Ativo)"
-    }
+      status: "Persistido (WAL Ativo)",
+      endpoint: "recentes",
+      pingUrl: "/api/contatos/recentes",
+    },
   };
 
+  let currentArchKey = "client";
   const archNodeButtons = document.querySelectorAll(".arch-node-btn");
   const archDetailCategory = document.getElementById("arch-detail-category");
   const archDetailTitle = document.getElementById("arch-detail-title");
@@ -136,33 +268,92 @@ document.addEventListener("DOMContentLoaded", () => {
   const archDetailLatency = document.getElementById("arch-detail-latency");
   const archDetailTech = document.getElementById("arch-detail-tech");
   const archDetailStatus = document.getElementById("arch-detail-status");
+  const archPingBtn = document.getElementById("arch-ping-btn");
+  const archTestApiBtn = document.getElementById("arch-test-api-btn");
 
-  archNodeButtons.forEach((btn) => {
+  function selectArchNode(nodeKey) {
+    const data = archNodes[nodeKey];
+    if (!data) return;
+    currentArchKey = nodeKey;
+
+    archNodeButtons.forEach((b) => {
+      const isMatch = b.dataset.archNode === nodeKey;
+      b.classList.toggle("is-active", isMatch);
+      b.setAttribute("aria-selected", isMatch ? "true" : "false");
+    });
+
+    if (archDetailCategory) archDetailCategory.textContent = data.category;
+    if (archDetailTitle) archDetailTitle.textContent = data.title;
+    if (archDetailDesc) archDetailDesc.textContent = data.desc;
+    if (archDetailProtocol) archDetailProtocol.textContent = data.protocol;
+    if (archDetailPort) archDetailPort.textContent = data.port;
+    if (archDetailSecurity) archDetailSecurity.textContent = data.security;
+    if (archDetailLatency) archDetailLatency.textContent = data.latency;
+    if (archDetailStatus) archDetailStatus.textContent = data.status;
+    if (archTestApiBtn) archTestApiBtn.dataset.targetEndpoint = data.endpoint;
+
+    if (archDetailTech) {
+      archDetailTech.innerHTML = data.tech.map((t) => `<span>${escapeHtml(t)}</span>`).join("");
+    }
+  }
+
+  archNodeButtons.forEach((btn, idx) => {
     btn.addEventListener("click", () => {
-      archNodeButtons.forEach(b => {
-        b.classList.remove("is-active");
-        b.setAttribute("aria-selected", "false");
-      });
-      btn.classList.add("is-active");
-      btn.setAttribute("aria-selected", "true");
+      selectArchNode(btn.dataset.archNode || "client");
+    });
 
-      const nodeKey = btn.dataset.archNode;
-      const data = archNodes[nodeKey];
-      if (data) {
-        if (archDetailCategory) archDetailCategory.textContent = data.category;
-        if (archDetailTitle) archDetailTitle.textContent = data.title;
-        if (archDetailDesc) archDetailDesc.textContent = data.desc;
-        if (archDetailProtocol) archDetailProtocol.textContent = data.protocol;
-        if (archDetailPort) archDetailPort.textContent = data.port;
-        if (archDetailSecurity) archDetailSecurity.textContent = data.security;
-        if (archDetailLatency) archDetailLatency.textContent = data.latency;
-        if (archDetailStatus) archDetailStatus.textContent = data.status;
-
-        if (archDetailTech) {
-          archDetailTech.innerHTML = data.tech.map(t => `<span>${t}</span>`).join("");
-        }
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        const dir = e.key === "ArrowRight" ? 1 : -1;
+        const nextIdx = (idx + dir + archNodeButtons.length) % archNodeButtons.length;
+        const nextBtn = archNodeButtons[nextIdx];
+        nextBtn.focus();
+        selectArchNode(nextBtn.dataset.archNode || "client");
       }
     });
+  });
+
+  document.querySelectorAll(".flow-node[data-hero-arch]").forEach((node) => {
+    const triggerHeroNode = () => {
+      const targetKey = node.dataset.heroArch || "client";
+      selectArchNode(targetKey);
+      document.getElementById("arquitetura")?.scrollIntoView({ behavior: "smooth" });
+    };
+    node.addEventListener("click", triggerHeroNode);
+    node.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        triggerHeroNode();
+      }
+    });
+  });
+
+  archPingBtn?.addEventListener("click", async () => {
+    const data = archNodes[currentArchKey];
+    if (!data) return;
+    const t0 = performance.now();
+    try {
+      const res = await fetch(data.pingUrl);
+      const rtt = Math.round(performance.now() - t0);
+      const serverTime = res.headers.get("x-process-time-ms") || `${rtt}`;
+      if (archDetailLatency) {
+        archDetailLatency.textContent = `${rtt} ms (ASGI: ${serverTime} ms)`;
+      }
+      showToast(`Camada "${data.title}" respondeu em ${rtt} ms (Processamento: ${serverTime} ms).`, "success");
+    } catch {
+      showToast("Não foi possível medir a latência da camada.", "error");
+    }
+  });
+
+  archTestApiBtn?.addEventListener("click", () => {
+    const targetEndpoint = archTestApiBtn.dataset.targetEndpoint || "servicos";
+    const matchingTab = document.querySelector(`.api-tab[data-endpoint="${targetEndpoint}"]`);
+    if (matchingTab) {
+      matchingTab.click();
+      document.getElementById("api-playground")?.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => document.getElementById("api-send-btn")?.click(), 350);
+    }
   });
 
   const apiTabs = document.querySelectorAll(".api-tab");
@@ -175,25 +366,116 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiResLatency = document.getElementById("api-res-latency");
   const apiJsonOutput = document.getElementById("api-json-output");
   const apiCopyJsonBtn = document.getElementById("api-copy-json");
+  const apiViewBtns = document.querySelectorAll(".api-view-btn");
 
+  const DEFAULT_PAYLOADS = {
+    contato: JSON.stringify(
+      {
+        nome: "Desenvolvedor Teste",
+        email: "dev@exemplo.com",
+        topico: "Arquitetura Cloud",
+        mensagem: "Testando o console interativo da API NuvemLab.",
+      },
+      null,
+      2
+    ),
+    simulador: JSON.stringify(
+      {
+        requisicoes_mes: 250000,
+        memoria_mb: 1024,
+        instancias: 2,
+        perfil: "standard",
+      },
+      null,
+      2
+    ),
+  };
+
+  let activeEndpointKey = "servicos";
   let activeMethod = "GET";
   let activeUrl = "/api/servicos";
+  let activeResponseView = "json";
+  let lastJsonResponse = "// Clique em \"Executar Requisição\" para ver a resposta em tempo real...";
+  let lastHeadersResponse = {};
+
+  function buildCurlCommand() {
+    const origin = window.location.origin || "http://localhost:8000";
+    if (activeMethod === "POST" && apiPayloadInput) {
+      const compactBody = apiPayloadInput.value.replace(/\s+/g, " ").trim();
+      return `curl -i -X POST "${origin}${activeUrl}" \\\n  -H "Content-Type: application/json" \\\n  -d '${compactBody}'`;
+    }
+    return `curl -i -X GET "${origin}${activeUrl}"`;
+  }
+
+  function renderConsoleOutput() {
+    if (!apiJsonOutput) return;
+
+    if (activeResponseView === "json") {
+      if (typeof lastJsonResponse === "string" && lastJsonResponse.startsWith("//")) {
+        apiJsonOutput.innerHTML = `<code><span class="json-null">${escapeHtml(lastJsonResponse)}</span></code>`;
+      } else {
+        apiJsonOutput.innerHTML = `<code>${syntaxHighlight(lastJsonResponse)}</code>`;
+      }
+    } else if (activeResponseView === "headers") {
+      const keys = Object.keys(lastHeadersResponse);
+      if (!keys.length) {
+        apiJsonOutput.innerHTML = `<code><span class="json-null">// Execute uma requisição para inspecionar os cabeçalhos HTTP e OWASP...</span></code>`;
+      } else {
+        const lines = keys.map((k) => {
+          const val = escapeHtml(lastHeadersResponse[k]);
+          return `<span class="json-key">"${escapeHtml(k)}"</span>: <span class="json-string">"${val}"</span>`;
+        });
+        apiJsonOutput.innerHTML = `<code>{\n  ${lines.join(",\n  ")}\n}</code>`;
+      }
+    } else if (activeResponseView === "curl") {
+      apiJsonOutput.innerHTML = `<code>${escapeHtml(buildCurlCommand())}</code>`;
+    }
+  }
+
+  apiViewBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      apiViewBtns.forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      activeResponseView = btn.dataset.view || "json";
+      const copySpan = apiCopyJsonBtn?.querySelector("span");
+      if (copySpan) {
+        copySpan.textContent =
+          activeResponseView === "curl"
+            ? "Copiar cURL"
+            : activeResponseView === "headers"
+              ? "Copiar Headers"
+              : "Copiar JSON";
+      }
+      renderConsoleOutput();
+    });
+  });
 
   apiTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      apiTabs.forEach(t => t.classList.remove("is-active"));
+      apiTabs.forEach((t) => t.classList.remove("is-active"));
       tab.classList.add("is-active");
 
+      activeEndpointKey = tab.dataset.endpoint || "servicos";
       activeMethod = tab.dataset.method || "GET";
       activeUrl = tab.dataset.url || "/api/servicos";
 
-      if (apiMethodLabel) apiMethodLabel.textContent = activeMethod;
+      if (apiMethodLabel) {
+        apiMethodLabel.textContent = activeMethod;
+        apiMethodLabel.style.color = activeMethod === "POST" ? "var(--azure)" : "var(--emerald)";
+      }
       if (apiUrlInput) apiUrlInput.value = activeUrl;
 
       if (activeMethod === "POST") {
         if (apiBodyEditor) apiBodyEditor.style.display = "block";
+        if (apiPayloadInput && DEFAULT_PAYLOADS[activeEndpointKey]) {
+          apiPayloadInput.value = DEFAULT_PAYLOADS[activeEndpointKey];
+        }
       } else {
         if (apiBodyEditor) apiBodyEditor.style.display = "none";
+      }
+
+      if (activeResponseView === "curl") {
+        renderConsoleOutput();
       }
     });
   });
@@ -208,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const options = {
           method: activeMethod,
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
         };
 
         if (activeMethod === "POST" && apiPayloadInput) {
@@ -226,24 +508,28 @@ document.addEventListener("DOMContentLoaded", () => {
           apiResStatus.className = response.ok ? "status-chip chip-success" : "status-chip chip-error";
         }
 
-        const responseData = await response.json();
-        if (apiJsonOutput) {
-          apiJsonOutput.innerHTML = `<code>${syntaxHighlight(responseData)}</code>`;
-        }
+        const headersObj = {};
+        response.headers.forEach((val, key) => {
+          headersObj[key] = val;
+        });
+        lastHeadersResponse = headersObj;
+
+        lastJsonResponse = await response.json();
+        renderConsoleOutput();
 
         if (activeUrl === "/api/contato" && response.ok) {
           fetchTelemetryMetrics();
+          fetchRecentContacts();
         }
       } catch (err) {
         const endTime = performance.now();
         if (apiResLatency) apiResLatency.textContent = `${Math.round(endTime - startTime)} ms`;
         if (apiResStatus) {
-          apiResStatus.textContent = "Erro de Rede / Timeout";
+          apiResStatus.textContent = "Erro de Rede / JSON";
           apiResStatus.className = "status-chip chip-error";
         }
-        if (apiJsonOutput) {
-          apiJsonOutput.innerHTML = `<code><span class="json-null">// Falha ao conectar: ${escapeHtml(err.message)}</span></code>`;
-        }
+        lastJsonResponse = `// Falha ao processar requisição: ${err.message}`;
+        renderConsoleOutput();
       } finally {
         apiSendBtn.classList.remove("is-loading");
         apiSendBtn.disabled = false;
@@ -253,9 +539,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (apiCopyJsonBtn && apiJsonOutput) {
     apiCopyJsonBtn.addEventListener("click", () => {
-      const textToCopy = apiJsonOutput.textContent;
+      const textToCopy = apiJsonOutput.textContent || "";
       navigator.clipboard.writeText(textToCopy).then(() => {
-        showToast("JSON copiado para a área de transferência!", "success");
+        showToast("Conteúdo copiado para a área de transferência!", "success");
       });
     });
   }
@@ -263,16 +549,101 @@ document.addEventListener("DOMContentLoaded", () => {
   const sliderReqs = document.getElementById("slider-reqs");
   const sliderMem = document.getElementById("slider-mem");
   const sliderInst = document.getElementById("slider-inst");
+  const profileTabs = document.querySelectorAll(".profile-tab");
 
   const valReqs = document.getElementById("val-reqs");
   const valMem = document.getElementById("val-mem");
   const valInst = document.getElementById("val-inst");
 
   const finopsSavings = document.getElementById("finops-savings-percent");
+  const finopsAnnualSavings = document.getElementById("finops-annual-savings");
   const finopsCostAzure = document.getElementById("finops-cost-azure");
   const finopsCostOnprem = document.getElementById("finops-cost-onprem");
   const finopsThroughput = document.getElementById("finops-throughput");
   const finopsLatency = document.getElementById("finops-latency");
+  const finopsTierRec = document.getElementById("finops-tier-rec");
+  const finopsExportBtn = document.getElementById("finops-export-btn");
+
+  let activeFinopsProfile = "standard";
+  let lastFinopsResult = {};
+  let finopsDebounceTimer = null;
+
+  function applyFinOpsVisuals(data) {
+    lastFinopsResult = data;
+
+    if (finopsSavings) finopsSavings.textContent = `${Math.round(data.economia_percentual)}% de redução`;
+    if (finopsAnnualSavings) {
+      finopsAnnualSavings.textContent = `Economia anual: ~$${data.economia_anual_usd.toFixed(2)}/ano • SLA ${data.sla_disponibilidade}`;
+    }
+    if (finopsCostAzure) finopsCostAzure.textContent = `$${data.custo_azure_app_service.toFixed(2)} / mês`;
+    if (finopsCostOnprem) finopsCostOnprem.textContent = `$${data.custo_on_premise_estimado.toFixed(2)} / mês`;
+    if (finopsThroughput) finopsThroughput.textContent = `${data.requisicoes_suportadas_segundo} req / seg`;
+    if (finopsLatency) finopsLatency.textContent = `~${data.latencia_media_ms.toFixed(1)} ms`;
+    if (finopsTierRec) finopsTierRec.textContent = `${data.tier_recomendado} (${data.vcpu_alocada} vCPU)`;
+
+    const barValAzure = document.getElementById("finops-bar-val-azure");
+    const barValAca = document.getElementById("finops-bar-val-aca");
+    const barValOnprem = document.getElementById("finops-bar-val-onprem");
+    const chartFillAzure = document.getElementById("finops-chart-fill-azure");
+    const chartFillAca = document.getElementById("finops-chart-fill-aca");
+    const chartFillOnprem = document.getElementById("finops-chart-fill-onprem");
+
+    if (barValAzure) barValAzure.textContent = `$${data.custo_azure_app_service.toFixed(2)}/mês`;
+    if (barValAca) barValAca.textContent = `$${data.custo_azure_container_apps.toFixed(2)}/mês`;
+    if (barValOnprem) barValOnprem.textContent = `$${data.custo_on_premise_estimado.toFixed(2)}/mês`;
+
+    const maxCost = Math.max(
+      data.custo_on_premise_estimado,
+      data.custo_azure_app_service,
+      data.custo_azure_container_apps,
+      1
+    );
+    if (chartFillAzure) {
+      chartFillAzure.style.width = `${Math.max(8, Math.round((data.custo_azure_app_service / maxCost) * 100))}%`;
+    }
+    if (chartFillAca) {
+      chartFillAca.style.width = `${Math.max(8, Math.round((data.custo_azure_container_apps / maxCost) * 100))}%`;
+    }
+    if (chartFillOnprem) {
+      chartFillOnprem.style.width = `${Math.max(8, Math.round((data.custo_on_premise_estimado / maxCost) * 100))}%`;
+    }
+  }
+
+  function computeLocalFinOps(reqs, mem, inst, perfil) {
+    const mult = { starter: 0.75, standard: 1.0, premium: 1.65 }[perfil] || 1.0;
+    const fatorMem = Math.max(0, (mem - 512) / 512) * 3.5;
+
+    const costAzure = (13.0 * mult + fatorMem) * inst + (reqs / 1000000) * 0.4;
+    const costAca = Math.max(6.5, 8.5 * inst + (reqs / 1000000) * 0.85 + fatorMem * 0.6 * inst);
+    const costOnprem = 45.0 * inst + 25.0 + fatorMem * 2.2 * inst;
+    const savings = Math.max(0, ((costOnprem - costAzure) / costOnprem) * 100);
+    const annual = Math.max(0, (costOnprem - costAzure) * 12);
+    const rps = Math.max(50, Math.round((mem / 256) * 120 * inst));
+    const latency = Math.max(6.5, 38.0 - inst * 3.5 - (perfil === "premium" ? 1.5 : 0));
+    const vcpu = Number(Math.max(0.5, (mem / 1024) * inst).toFixed(1));
+
+    let tierRec = "Basic / Standard (B1/S1 Linux)";
+    let sla = "99.95%";
+    if (inst >= 4 || reqs > 2000000 || mem >= 2048) {
+      tierRec = "Premium v3 (P1v3 Auto-Scale)";
+      sla = inst >= 2 ? "99.99%" : "99.95%";
+    } else if (inst >= 2 || reqs >= 250000) {
+      tierRec = "Standard (S1 Zone-Redundant)";
+    }
+
+    return {
+      custo_azure_app_service: Number(costAzure.toFixed(2)),
+      custo_azure_container_apps: Number(costAca.toFixed(2)),
+      custo_on_premise_estimado: Number(costOnprem.toFixed(2)),
+      economia_percentual: Number(savings.toFixed(1)),
+      economia_anual_usd: Number(annual.toFixed(2)),
+      sla_disponibilidade: sla,
+      latencia_media_ms: Number(latency.toFixed(1)),
+      requisicoes_suportadas_segundo: rps,
+      tier_recomendado: tierRec,
+      vcpu_alocada: vcpu,
+    };
+  }
 
   function updateFinOpsCalculations() {
     if (!sliderReqs || !sliderMem || !sliderInst) return;
@@ -293,34 +664,54 @@ document.addEventListener("DOMContentLoaded", () => {
     updateSliderFill(sliderMem, 256, 4096, mem);
     updateSliderFill(sliderInst, 1, 10, inst);
 
-    const costAzure = (13.0 * inst) + ((reqs / 1000000) * 0.40);
-    const costOnprem = (45.0 * inst) + 25.0;
-    const savings = Math.max(0, Math.round(((costOnprem - costAzure) / costOnprem) * 100));
-    const rps = Math.max(50, Math.round((mem / 256) * 120 * inst));
-    const latency = Math.max(8.0, 38.0 - (inst * 3.5)).toFixed(1);
+    const localData = computeLocalFinOps(reqs, mem, inst, activeFinopsProfile);
+    applyFinOpsVisuals(localData);
 
-    if (finopsSavings) finopsSavings.textContent = `${savings}% de redução`;
-    if (finopsCostAzure) finopsCostAzure.textContent = `$${costAzure.toFixed(2)} / mês`;
-    if (finopsCostOnprem) finopsCostOnprem.textContent = `$${costOnprem.toFixed(2)} / mês`;
-    if (finopsThroughput) finopsThroughput.textContent = `${rps} req / seg`;
-    if (finopsLatency) finopsLatency.textContent = `~${latency} ms`;
-
-    const barValAzure = document.getElementById("finops-bar-val-azure");
-    const barValOnprem = document.getElementById("finops-bar-val-onprem");
-    const chartFillAzure = document.getElementById("finops-chart-fill-azure");
-    const chartFillOnprem = document.getElementById("finops-chart-fill-onprem");
-
-    if (barValAzure) barValAzure.textContent = `$${costAzure.toFixed(2)}/mês`;
-    if (barValOnprem) barValOnprem.textContent = `$${costOnprem.toFixed(2)}/mês`;
-
-    if (chartFillAzure && chartFillOnprem) {
-      const maxCost = Math.max(costOnprem, costAzure, 1);
-      const azurePct = Math.max(8, Math.round((costAzure / maxCost) * 100));
-      const onpremPct = Math.max(8, Math.round((costOnprem / maxCost) * 100));
-      chartFillAzure.style.width = `${azurePct}%`;
-      chartFillOnprem.style.width = `${onpremPct}%`;
-    }
+    clearTimeout(finopsDebounceTimer);
+    finopsDebounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/simulador/custos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requisicoes_mes: reqs,
+            memoria_mb: mem,
+            instancias: inst,
+            perfil: activeFinopsProfile,
+          }),
+        });
+        if (res.ok) {
+          const remoteData = await res.json();
+          applyFinOpsVisuals(remoteData);
+        }
+      } catch {}
+    }, 180);
   }
+
+  profileTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      profileTabs.forEach((t) => t.classList.remove("is-active"));
+      tab.classList.add("is-active");
+      activeFinopsProfile = tab.dataset.profile || "standard";
+      updateFinOpsCalculations();
+    });
+  });
+
+  finopsExportBtn?.addEventListener("click", () => {
+    const report = {
+      gerado_em: new Date().toISOString(),
+      parametros: {
+        perfil: activeFinopsProfile,
+        requisicoes_mes: parseInt(sliderReqs?.value || "100000", 10),
+        memoria_mb: parseInt(sliderMem?.value || "512", 10),
+        instancias: parseInt(sliderInst?.value || "1", 10),
+      },
+      estimativa: lastFinopsResult,
+    };
+    navigator.clipboard.writeText(JSON.stringify(report, null, 2)).then(() => {
+      showToast("Relatório FinOps JSON copiado para a área de transferência!", "success");
+    });
+  });
 
   sliderReqs?.addEventListener("input", updateFinOpsCalculations);
   sliderMem?.addEventListener("input", updateFinOpsCalculations);
@@ -331,8 +722,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const telemetryUptime = document.getElementById("telemetry-uptime");
   const telemetryContacts = document.getElementById("telemetry-contacts");
   const telemetryDb = document.getElementById("telemetry-db");
+  const telemetryDbSize = document.getElementById("telemetry-db-size");
+  const telemetryReqsTotal = document.getElementById("telemetry-reqs-total");
+  const telemetryPythonVer = document.getElementById("telemetry-python-ver");
+  const telemetryAvgLatency = document.getElementById("telemetry-avg-latency");
   const telemetryRefreshBtn = document.getElementById("telemetry-refresh-btn");
   const heroLatencyVal = document.getElementById("hero-latency-val");
+  const sparklineLine = document.getElementById("sparkline-line");
+  const sparklineArea = document.getElementById("sparkline-area");
+
+  function updateSparkline(samples) {
+    if (!sparklineLine || !sparklineArea) return;
+    const pts = Array.isArray(samples) && samples.length >= 2 ? samples : [3.2, 2.8, 2.5, 3.0, 2.2];
+    const width = 300;
+    const height = 54;
+    const maxVal = Math.max(...pts, 10);
+    const minVal = Math.min(...pts, 0);
+    const range = Math.max(maxVal - minVal, 1);
+
+    const coords = pts.map((val, idx) => {
+      const x = Math.round((idx / (pts.length - 1)) * width);
+      const y = Math.round(height - 8 - ((val - minVal) / range) * (height - 18));
+      return `${x},${y}`;
+    });
+
+    const linePath = `M${coords.join(" L")}`;
+    const areaPath = `M0,${height} L${coords.join(" L")} L${width},${height} Z`;
+    sparklineLine.setAttribute("d", linePath);
+    sparklineArea.setAttribute("d", areaPath);
+  }
 
   async function fetchTelemetryMetrics() {
     const startTime = performance.now();
@@ -346,6 +764,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (telemetryStatus) telemetryStatus.textContent = "Online (Operacional)";
         if (telemetryContacts) telemetryContacts.textContent = data.total_contatos;
         if (telemetryDb) telemetryDb.textContent = "WAL Concorrente";
+        if (telemetryDbSize && data.banco_tamanho_kb) {
+          telemetryDbSize.textContent = `Volume SQLite: ${data.banco_tamanho_kb} KB`;
+        }
+        if (telemetryReqsTotal && typeof data.total_requisicoes === "number") {
+          telemetryReqsTotal.textContent = `${data.total_requisicoes} reqs processadas`;
+        }
+        if (telemetryPythonVer && data.python_versao) {
+          telemetryPythonVer.textContent = `FastAPI • Python ${data.python_versao}`;
+        }
+        if (telemetryAvgLatency) {
+          telemetryAvgLatency.textContent = `~${data.latencia_media_ms || latency} ms`;
+        }
 
         const seconds = Math.floor(data.uptime_segundos);
         const mins = Math.floor(seconds / 60);
@@ -356,18 +786,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (telemetryUptime) telemetryUptime.textContent = uptimeStr;
         if (heroLatencyVal) heroLatencyVal.textContent = `~${latency} ms`;
+        if (data.historico_latencia_ms) {
+          updateSparkline(data.historico_latencia_ms);
+        }
       }
     } catch {
       if (telemetryStatus) telemetryStatus.textContent = "Degradado";
     }
   }
 
+  async function fetchRecentContacts() {
+    const listContainer = document.getElementById("recent-contacts-list");
+    if (!listContainer) return;
+
+    try {
+      const res = await fetch("/api/contatos/recentes?limite=4");
+      if (!res.ok) return;
+      const items = await res.json();
+
+      if (!items.length) {
+        listContainer.innerHTML = `<div class="recent-contact-empty">Nenhum protocolo registrado ainda. Envie o formulário ao lado para testar!</div>`;
+        return;
+      }
+
+      listContainer.innerHTML = items
+        .map(
+          (item) => `
+          <div class="recent-contact-item">
+            <div class="recent-contact-top">
+              <code class="protocol-pill">${escapeHtml(item.protocolo)}</code>
+              <span class="topic-mini-badge">${escapeHtml(item.topico)}</span>
+            </div>
+            <div class="recent-contact-meta">
+              <strong>${item.nome_mascarado}</strong>
+              <span>(${escapeHtml(item.email_mascarado)})</span>
+            </div>
+          </div>
+        `
+        )
+        .join("");
+    } catch {}
+  }
+
   telemetryRefreshBtn?.addEventListener("click", () => {
     fetchTelemetryMetrics();
+    fetchRecentContacts();
     showToast("Métricas de telemetria atualizadas com sucesso.", "info");
   });
 
   fetchTelemetryMetrics();
+  fetchRecentContacts();
   setInterval(fetchTelemetryMetrics, 30000);
 
   const contactForm = document.getElementById("contact-form");
@@ -380,10 +848,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   topicChips.forEach((chip) => {
     chip.addEventListener("click", () => {
-      topicChips.forEach(c => c.classList.remove("is-active"));
+      topicChips.forEach((c) => c.classList.remove("is-active"));
       chip.classList.add("is-active");
       const chosenTopic = chip.dataset.topic;
-      if (topicInput) topicInput.value = chosenTopic;
+      if (topicInput && chosenTopic) topicInput.value = chosenTopic;
     });
   });
 
@@ -418,7 +886,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const formData = new FormData(contactForm);
       const payload = Object.fromEntries(formData.entries());
 
-      contactForm.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
+      contactForm.querySelectorAll(".is-invalid").forEach((el) => el.classList.remove("is-invalid"));
 
       if (payload.hp_website && payload.hp_website.trim() !== "") {
         showToast("Mensagem enviada com sucesso!", "success");
@@ -464,6 +932,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         showToast(successMsg, "success");
         fetchTelemetryMetrics();
+        fetchRecentContacts();
       } catch (err) {
         const errorMsg = err.message || "Falha na comunicação. Tente novamente.";
         if (formStatus) {
@@ -489,7 +958,7 @@ document.addEventListener("DOMContentLoaded", () => {
         nome: "Nome Completo",
         email: "E-mail Profissional",
         mensagem: "Mensagem",
-        topico: "Assunto"
+        topico: "Assunto",
       };
 
       const messages = errData.detail.map((err) => {
@@ -577,21 +1046,24 @@ document.addEventListener("DOMContentLoaded", () => {
       json = JSON.stringify(json, null, 2);
     }
     json = escapeHtml(json);
-    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
-      let cls = "json-number";
-      if (/^"/.test(match)) {
-        if (/:$/.test(match)) {
-          cls = "json-key";
-        } else {
-          cls = "json-string";
+    return json.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      (match) => {
+        let cls = "json-number";
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = "json-key";
+          } else {
+            cls = "json-string";
+          }
+        } else if (/true|false/.test(match)) {
+          cls = "json-boolean";
+        } else if (/null/.test(match)) {
+          cls = "json-null";
         }
-      } else if (/true|false/.test(match)) {
-        cls = "json-boolean";
-      } else if (/null/.test(match)) {
-        cls = "json-null";
+        return `<span class="${cls}">${match}</span>`;
       }
-      return `<span class="${cls}">${match}</span>`;
-    });
+    );
   }
 
   function renderUptimeHistory() {
@@ -616,7 +1088,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderUptimeHistory();
 
   const spotlightCards = document.querySelectorAll(
-    ".feature, .service-card, .telemetry-card, .finops-controls-card, .finops-results-card, .arch-details-card, .cloud-card, .contact-form, .uptime-history-card"
+    ".feature, .service-card, .telemetry-card, .finops-controls-card, .finops-results-card, .arch-details-card, .cloud-card, .contact-form, .uptime-history-card, .recent-contacts-panel"
   );
 
   spotlightCards.forEach((card) => {
@@ -632,22 +1104,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const bottomNavItems = document.querySelectorAll(".mobile-bottom-item");
   if (bottomNavItems.length) {
     const sections = document.querySelectorAll("section[id]");
-    window.addEventListener("scroll", () => {
-      let currentId = "";
-      sections.forEach(sec => {
-        const top = sec.offsetTop - 200;
-        if (window.scrollY >= top) {
-          currentId = sec.getAttribute("id");
-        }
-      });
-      bottomNavItems.forEach(item => {
-        if (item.getAttribute("href") === `#${currentId}`) {
-          item.classList.add("is-active");
-        } else {
-          item.classList.remove("is-active");
-        }
-      });
-    }, { passive: true });
+    window.addEventListener(
+      "scroll",
+      () => {
+        let currentId = "";
+        sections.forEach((sec) => {
+          const top = sec.offsetTop - 200;
+          if (window.scrollY >= top) {
+            currentId = sec.getAttribute("id") || "";
+          }
+        });
+        bottomNavItems.forEach((item) => {
+          if (item.getAttribute("href") === `#${currentId}`) {
+            item.classList.add("is-active");
+          } else {
+            item.classList.remove("is-active");
+          }
+        });
+      },
+      { passive: true }
+    );
   }
 
   const windowGroups = document.querySelectorAll("[data-window-group]");
@@ -656,13 +1132,16 @@ document.addEventListener("DOMContentLoaded", () => {
   if (windowGroups.length && !reduceMotion.matches && "IntersectionObserver" in window) {
     document.documentElement.classList.add("motion-enabled");
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-        }
-      });
-    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+    );
 
     windowGroups.forEach((group) => {
       group.querySelectorAll("[data-window]").forEach((el, index) => {
@@ -674,5 +1153,3 @@ document.addEventListener("DOMContentLoaded", () => {
     windowGroups.forEach((group) => group.classList.add("is-visible"));
   }
 });
-
-
