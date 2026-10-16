@@ -22,8 +22,27 @@ document.addEventListener("DOMContentLoaded", () => {
     light: "#f8fafc",
   };
 
+  let themeSwitchTimer = null;
+
   function applyTheme(theme, notify = false) {
     const validTheme = THEME_ORDER.includes(theme) ? theme : "dark";
+    const previousTheme = document.documentElement.getAttribute("data-theme") || "dark";
+
+    if (notify && previousTheme !== validTheme && themeToggleBtn) {
+      const outgoingIcon = themeToggleBtn.querySelector(`.theme-icon-${previousTheme}`);
+      const incomingIcon = themeToggleBtn.querySelector(`.theme-icon-${validTheme}`);
+      if (incomingIcon) incomingIcon.classList.remove("is-exiting");
+      if (outgoingIcon) outgoingIcon.classList.add("is-exiting");
+      themeToggleBtn.classList.remove("is-switching");
+      void themeToggleBtn.offsetWidth;
+      themeToggleBtn.classList.add("is-switching");
+      if (themeSwitchTimer) clearTimeout(themeSwitchTimer);
+      themeSwitchTimer = setTimeout(() => {
+        if (outgoingIcon) outgoingIcon.classList.remove("is-exiting");
+        themeToggleBtn.classList.remove("is-switching");
+      }, 380);
+    }
+
     document.documentElement.setAttribute("data-theme", validTheme);
     localStorage.setItem("nuvemlab-theme", validTheme);
     if (themeLabel) themeLabel.textContent = THEME_BADGES[validTheme];

@@ -23,8 +23,9 @@ def test_pagina_inicial_e_cabecalhos(tmp_path, monkeypatch):
 
     assert resposta.status_code == 200
     assert "NuvemLab" in resposta.text
-    assert 'href="/static/styles.css?v=20260820"' in resposta.text
-    assert 'src="/static/app.js?v=20260820"' in resposta.text
+    assert 'href="/static/styles.css?v=20261016"' in resposta.text
+    assert 'src="/static/app.js?v=20261016"' in resposta.text
+    assert '<kbd class="cmd-kbd">Ctrl+K</kbd>' in resposta.text
     assert "Space+Grotesk" in resposta.text
     assert "Plus+Jakarta+Sans" in resposta.text
     assert "JetBrains+Mono" in resposta.text

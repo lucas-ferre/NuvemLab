@@ -9,7 +9,7 @@ uma página institucional reativa acompanhada de **Explorador Interativo de Arqu
 
 - **Interface & Design System:**
   - Identidade tipográfica *Cloud Native Geometric* combinando `Space Grotesk` (títulos e marca), `Plus Jakarta Sans` (interface e leitura) e `JetBrains Mono` (código, métricas e protocolos com números tabulares `tabular-nums`).
-  - Estética *Liquid Glass / Glassmorphism* com suporte nativo a três temas visuais (**Dark**, **Azure Deep** e **Light**), menu mobile drawer responsivo, **Command Palette rápida (`Ctrl+K`)** e animações suaves respeitando `prefers-reduced-motion`.
+  - Estética *Liquid Glass / Glassmorphism* com suporte nativo a três temas visuais (**Dark**, **Azure Deep** e **Light**) dotados de animação de metamorfose rotacional nos ícones de alternância, cabeçalho responsivo estabilizado, menu mobile drawer, **Command Palette rápida (`Ctrl+K`)** e microinterações que respeitam `prefers-reduced-motion`.
 - **Módulos Interativos:**
   - **Explorador de Arquitetura:** topologia navegável por clique ou teclado detalhando protocolos, portas, camadas de defesa e teste de latência real por componente.
   - **Playground da API REST:** console integrado para executar chamadas reais (`GET` e `POST`), medir o tempo de processamento em milissegundos, inspecionar cabeçalhos HTTP/OWASP e gerar comandos `cURL`.
